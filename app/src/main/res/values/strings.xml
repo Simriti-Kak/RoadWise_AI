@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">RoadWise</string>
+    <string name="accessibility_service_description">Automatically starts RoadWise monitoring when Google Maps navigation is opened.</string>
+    <string name="back">Back</string>
+    <string name="account">Account</string>
+    <string name="profile_picture">Profile Picture</string>
+    <string name="logout">Logout</string>
+    <string name="version_format">v%1$s</string>
+    <string name="os_libraries">osmdroid, Retrofit, OkHttp, Firebase, ONNX Runtime, ML Kit, JTransforms, Coroutines, Jetpack</string>
+    <string name="direct_path_format">Direct Path • %.1f km</string>
+    <string name="time_format">%1$d min</string>
+    
+    <string name="status_passive">PASSIVE (ALERTS ONLY)</string>
+    <string name="status_stationary">STATIONARY</string>
+    <string name="status_idle">IDLE (SLOW)</string>
+    <string name="status_monitoring">MONITORING ACTIVE</string>
+    <string name="nav_overview">OVERVIEW</string>
+    <string name="nav_history">HISTORY</string>
+</resources>

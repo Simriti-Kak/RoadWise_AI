@@ -1,0 +1,320 @@
+package com.roadwise
+
+import android.content.Context
+import android.content.Intent
+import android.media.ToneGenerator
+import android.media.AudioManager
+import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.roadwise.databinding.ActivitySettingsBinding
+import com.roadwise.utils.PotholeRepository
+import com.roadwise.services.DriveGuardService
+import android.app.ActivityManager
+import android.util.Log
+import com.google.android.gms.location.*
+import android.app.PendingIntent
+import android.provider.Settings
+import android.os.PowerManager
+import android.net.Uri
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+
+class SettingsActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivitySettingsBinding
+    private var toneGenerator: ToneGenerator? = null
+
+    // ActivityResultLauncher for LoginActivity result
+    private val loginLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            updateNavForRole()
+            val name = com.roadwise.utils.SessionManager.getUserName(this)
+            android.widget.Toast.makeText(this, "Welcome back, $name!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivitySettingsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        // Hide status bar for immersive experience
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
+        val prefs = getSharedPreferences("roadwise_prefs", Context.MODE_PRIVATE)
+
+        // ─────────────────────────────────────────────
+        // DETECTION ENGINE — Background + Sensitivity
+        // ─────────────────────────────────────────────
+        binding.switchBackground.isChecked = prefs.getBoolean("pref_background_detection", true)
+        binding.switchBackground.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_background_detection", isChecked).apply()
+        }
+
+        binding.switchBackgroundService.isChecked = isServiceRunning(DriveGuardService::class.java)
+        binding.switchBackgroundService.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_background_service", isChecked).apply()
+            val intent = Intent(this, DriveGuardService::class.java)
+            if (isChecked) {
+                startForegroundService(intent)
+            } else {
+                stopService(intent)
+            }
+        }
+
+        binding.switchAutoStart.isChecked = prefs.getBoolean("pref_auto_start", false)
+        binding.switchAutoStart.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_auto_start", isChecked).apply()
+            if (isChecked) {
+                requestActivityTransitions()
+            } else {
+                removeActivityTransitions()
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // POWER MANAGEMENT — Background Reliability
+        // ─────────────────────────────────────────────
+        binding.btnBatteryOptimize.setOnClickListener {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback for devices that block direct request
+                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                startActivity(intent)
+            }
+        }
+
+        binding.sliderSensitivity.value = prefs.getFloat("pref_sensitivity_index", 1.0f)
+        updateSensitivityLabel(prefs.getFloat("pref_sensitivity_index", 1.0f))
+        binding.sliderSensitivity.addOnChangeListener { _, value, _ ->
+            prefs.edit().putFloat("pref_sensitivity_index", value).apply()
+            val threshold = when (value) {
+                0.0f -> 6.0f   // Reactive — only big jolts
+                1.0f -> 3.8f   // Balanced
+                2.0f -> 2.2f   // Proactive — catches smaller bumps
+                else -> 3.8f
+            }
+            prefs.edit().putFloat("pref_sensor_threshold", threshold).apply()
+            updateSensitivityLabel(value)
+        }
+
+        // ─────────────────────────────────────────────
+        // RESOURCE MANAGEMENT — Battery Saver
+        // ─────────────────────────────────────────────
+        binding.switchBattery.isChecked = prefs.getBoolean("pref_battery_saver", false)
+        binding.switchBattery.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_battery_saver", isChecked).apply()
+        }
+
+        binding.switchVoiceAlerts.isChecked = prefs.getBoolean("pref_voice_alerts", true)
+        binding.switchVoiceAlerts.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pref_voice_alerts", isChecked).apply()
+        }
+
+        // ─────────────────────────────────────────────
+        // RESOURCE MANAGEMENT — Audio Alerts
+        // ─────────────────────────────────────────────
+        binding.sliderAudio.value = prefs.getFloat("pref_audio_alerts", 65.0f)
+        updateAudioLabel(prefs.getFloat("pref_audio_alerts", 65.0f))
+        try {
+            toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+        } catch (_: Exception) { }
+
+        binding.sliderAudio.addOnChangeListener { _, value, fromUser ->
+            prefs.edit().putFloat("pref_audio_alerts", value).apply()
+            updateAudioLabel(value)
+                if (fromUser && value > 0f) {
+                try {
+                    toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+                } catch (_: Exception) { }
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        // DATA MANAGEMENT
+        // ─────────────────────────────────────────────
+        refreshDataStats()
+
+        binding.btnClearHistory.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Clear All History?")
+                .setMessage("This will permanently delete all ${PotholeRepository.getAllPotholes(this).size} detection records and their photos. This cannot be undone.")
+                .setPositiveButton("Clear") { _, _ ->
+                    PotholeRepository.clearAll(this)
+                    refreshDataStats()
+                    android.widget.Toast.makeText(this, "History cleared.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
+        // ─────────────────────────────────────────────
+        // ABOUT
+        // ─────────────────────────────────────────────
+        binding.tvVersion.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
+
+        binding.btnShareApp.setOnClickListener {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, "Check out RoadWise!")
+                putExtra(Intent.EXTRA_TEXT, "I've been using RoadWise to detect potholes and map road conditions in real time. Check it out!")
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share RoadWise via"))
+        }
+
+        setupNavigation()
+        updateNavForRole()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateBatteryStatus()
+        refreshDataStats()
+        // Refresh service toggle state
+        binding.switchBackgroundService.isChecked = isServiceRunning(DriveGuardService::class.java)
+    }
+
+    private fun updateBatteryStatus() {
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoring = pm.isIgnoringBatteryOptimizations(packageName)
+        
+        if (isIgnoring) {
+            binding.tvBatteryStatus.text = "Optimized for background (Allowed)"
+            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.emerald_neon))
+            binding.btnBatteryOptimize.visibility = android.view.View.GONE
+        } else {
+            binding.tvBatteryStatus.text = "Restricted by system (Tap Fix Now)"
+            binding.tvBatteryStatus.setTextColor(ContextCompat.getColor(this, R.color.text_med))
+            binding.btnBatteryOptimize.visibility = android.view.View.VISIBLE
+        }
+    }
+
+    private fun updateSensitivityLabel(value: Float) {
+        val (threshold, label) = when (value) {
+            0.0f -> Pair(6.0f, "Reactive")
+            1.0f -> Pair(3.8f, "Balanced")
+            2.0f -> Pair(2.2f, "Proactive")
+            else -> Pair(3.8f, "Balanced")
+        }
+        binding.tvSensitivityLabel.text = "Threshold: ${threshold}g ($label)"
+    }
+
+    private fun updateAudioLabel(value: Float) {
+        val pct = value.toInt()
+        val label = when {
+            pct == 0   -> "Muted"
+            pct < 40   -> "$pct% — Quiet"
+            pct < 75   -> "$pct% — Normal"
+            else       -> "$pct% — Loud"
+        }
+        binding.tvAudioLabel.text = label
+    }
+
+    private fun refreshDataStats() {
+        val count = PotholeRepository.getAllPotholes(this).size
+        binding.tvRecordCount.text = count.toString()
+
+        val bytes = PotholeRepository.getStorageSizeBytes(this)
+        binding.tvStorageSize.text = when {
+            bytes < 1024 -> "${bytes}B"
+            bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024.0)} KB"
+            else -> "${"%.2f".format(bytes / (1024.0 * 1024.0))} MB"
+        }
+    }
+
+    private fun isServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun requestActivityTransitions() {
+        com.roadwise.utils.ActivityTransitionHelper.requestTransitions(this)
+    }
+
+    private fun removeActivityTransitions() {
+        com.roadwise.utils.ActivityTransitionHelper.removeTransitions(this)
+    }
+
+
+    private fun setupNavigation() {
+        binding.navDrive.setOnClickListener {
+            // Simply finish this activity to return to MainActivity (which is singleTop)
+            finish()
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
+        binding.navAlerts.setOnClickListener {
+            if (com.roadwise.utils.SessionManager.isAdmin(this)) {
+                startActivity(Intent(this, OverviewActivity::class.java))
+            } else {
+                startActivity(Intent(this, HistoryActivity::class.java))
+            }
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
+        binding.navSettings.setOnClickListener { /* already here */ }
+        binding.navAccount.setOnClickListener {
+            if (com.roadwise.utils.SessionManager.isLoggedIn(this)) {
+                startActivity(Intent(this, AccountActivity::class.java))
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+            } else {
+                loginLauncher.launch(Intent(this, LoginActivity::class.java))
+            }
+        }
+    }
+
+    private fun updateNavForRole() {
+        val isAdmin    = com.roadwise.utils.SessionManager.isAdmin(this)
+        val isLoggedIn = com.roadwise.utils.SessionManager.isLoggedIn(this)
+        val teal       = ContextCompat.getColor(this, R.color.emerald_neon)
+        val faded      = ContextCompat.getColor(this, R.color.text_med)
+
+        if (isAdmin) {
+            binding.navAlerts.setImageResource(R.drawable.ic_analytics)
+            binding.navAlertsLabel.text = "OVERVIEW"
+        } else {
+            binding.navAlerts.setImageResource(R.drawable.ic_alerts)
+            binding.navAlertsLabel.text = "HISTORY"
+        }
+
+        // Reset account label correctly based on login state
+        binding.navAccountLabel.text = if (isLoggedIn) {
+            com.roadwise.utils.SessionManager.getUserName(this).uppercase().take(8)
+        } else {
+            "ACCOUNT"
+        }
+
+        // Highlight Settings tab as active, fade others
+        binding.navDrive.setColorFilter(faded)
+        binding.navAlerts.setColorFilter(faded)
+        binding.navSettings.setColorFilter(teal) // Active
+        binding.navAccount.setColorFilter(faded)
+        
+        binding.navDriveLabel.setTextColor(faded)
+        binding.navAlertsLabel.setTextColor(faded)
+        binding.navSettingsLabel.setTextColor(teal) // Active
+        binding.navAccountLabel.setTextColor(faded)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        toneGenerator?.release()
+        toneGenerator = null
+    }
+}

@@ -1,0 +1,300 @@
+package com.roadwise.utils
+
+import android.content.Context
+import android.util.Log
+import android.widget.Toast
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.gson.*
+import com.google.gson.reflect.TypeToken
+import com.roadwise.models.PotholeData
+import com.roadwise.sensors.RoadFeature
+import org.osmdroid.util.GeoPoint
+import java.io.File
+import java.lang.reflect.Type
+import kotlinx.coroutines.*
+
+object PotholeRepository {
+    private const val PREFS_NAME = "pothole_prefs"
+    private const val KEY_POTHOLES = "potholes"
+    private var cached: List<PotholeData>? = null
+    private val firestore by lazy { FirebaseFirestore.getInstance() }
+
+    private val gson = GsonBuilder()
+        .registerTypeAdapter(GeoPoint::class.java, object : JsonSerializer<GeoPoint>, JsonDeserializer<GeoPoint> {
+            override fun serialize(src: GeoPoint, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+                val obj = JsonObject()
+                obj.addProperty("lat", src.latitude)
+                obj.addProperty("lon", src.longitude)
+                return obj
+            }
+
+            override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): GeoPoint {
+                val obj = json.asJsonObject
+                val lat = if (obj.has("lat")) obj.get("lat").asDouble else 0.0
+                val lon = if (obj.has("lon")) obj.get("lon").asDouble else 0.0
+                return GeoPoint(lat, lon)
+            }
+        })
+        .create()
+
+    fun savePothole(context: Context, pothole: PotholeData) {
+        try {
+            val potholes = getAllPotholes(context).toMutableList()
+            potholes.add(0, pothole)
+            saveAll(context, potholes)
+            cached = potholes
+            pushToCloud(context, pothole)
+        } catch (e: Exception) { Log.e("RoadWise-Repo", "Save failed", e) }
+    }
+
+    private fun pushToCloud(context: Context, pothole: PotholeData) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            CoroutineScope(Dispatchers.Main).launch {
+                Toast.makeText(context, "⚠️ Saved locally. Sign in to sync to cloud.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "☁️ Syncing to Cloud...", Toast.LENGTH_SHORT).show()
+                }
+
+                val data = hashMapOf(
+                    "lat" to pothole.location.latitude,
+                    "lon" to pothole.location.longitude,
+                    "type" to pothole.type.name,
+                    "intensity" to pothole.intensity,
+                    "severity" to pothole.severity.name,
+                    "timestamp" to pothole.timestamp,
+                    "userId" to currentUser.uid,
+                    "createdByEmail" to (currentUser.email ?: "")
+                )
+
+                withTimeout(15000L) {
+                    val task = firestore.collection("potholes").add(data)
+                    while (!task.isComplete) { delay(500) }
+
+                    if (task.isSuccessful) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "✅ CLOUD SAVED!", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        throw task.exception ?: Exception("Firebase Task Failed")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    val msg = if (e is TimeoutCancellationException) "Timeout: Slow Network" else e.message
+                    Toast.makeText(context, "❌ CLOUD ERROR: $msg", Toast.LENGTH_LONG).show()
+                }
+                Log.e("RoadWise-Cloud", "Sync error", e)
+            }
+        }
+    }
+
+    private fun pushToCloudSilent(pothole: PotholeData) {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val data = hashMapOf(
+            "lat" to pothole.location.latitude,
+            "lon" to pothole.location.longitude,
+            "type" to pothole.type.name,
+            "intensity" to pothole.intensity,
+            "severity" to pothole.severity.name,
+            "timestamp" to pothole.timestamp,
+            "userId" to currentUser.uid,
+            "createdByEmail" to (currentUser.email ?: "")
+        )
+        firestore.collection("potholes").add(data)
+            .addOnFailureListener { e ->
+                Log.e("RoadWise-Cloud", "Silent sync failed for pothole at ${pothole.timestamp}", e)
+            }
+    }
+
+    fun fetchFromCloud(context: Context, onComplete: (List<PotholeData>) -> Unit) {
+        firestore.collection("potholes").orderBy("timestamp", Query.Direction.DESCENDING).limit(500).get()
+            .addOnSuccessListener { result ->
+                val cloud = result.mapNotNull { doc ->
+                    try {
+                        val severityStr = doc.getString("severity")
+                        val severity = if (severityStr != null) Severity.valueOf(severityStr) else Severity.LOW
+                        
+                        PotholeData(
+                            GeoPoint(doc.getDouble("lat") ?: 0.0, doc.getDouble("lon") ?: 0.0),
+                            RoadFeature.valueOf(doc.getString("type") ?: "POTHOLE"),
+                            doc.getDouble("intensity")?.toFloat() ?: 0f,
+                            severity,
+                            doc.getLong("timestamp") ?: 0L,
+                            emptyList(),
+                            doc.getString("createdByEmail") ?: ""
+                        )
+                    } catch(e: Exception) { 
+                        Log.e("RoadWise-Repo", "Failed to parse document ${doc.id}", e)
+                        null 
+                    }
+                }
+                val local = getAllPotholes(context)
+
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser != null) {
+                    val localOnly = local.filter { localItem -> cloud.none { it.timestamp == localItem.timestamp } }
+                    if (localOnly.isNotEmpty()) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            for (pothole in localOnly) {
+                                pushToCloudSilent(pothole)
+                            }
+                        }
+                    }
+                }
+
+                val combined = (cloud + local).distinctBy { it.timestamp }.sortedByDescending { it.timestamp }
+                saveAll(context, combined)
+                cached = combined
+                onComplete(combined)
+            }
+            .addOnFailureListener { e ->
+                Log.e("RoadWise-Repo", "Firebase fetch failed completely", e)
+            }
+    }
+
+    fun deletePothole(context: Context, timestamp: Long) {
+        val potholes = getAllPotholes(context).toMutableList()
+        potholes.removeAll { it.timestamp == timestamp }
+        saveAllInternal(context, potholes)
+
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val task = firestore.collection("potholes").whereEqualTo("timestamp", timestamp).get()
+                    val result = com.google.android.gms.tasks.Tasks.await(task)
+                    for (doc in result.documents) {
+                        com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+                    }
+                } catch (e: Exception) {
+                    Log.e("RoadWise-Repo", "Failed to delete pothole from Firebase", e)
+                }
+            }
+        }
+    }
+
+    fun resolveHotspot(context: Context, targetPotholes: List<PotholeData>, onComplete: () -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val localData = getAllPotholes(context).toMutableList()
+                val timestampsToRemove = targetPotholes.map { it.timestamp }.toSet()
+                localData.removeAll { it.timestamp in timestampsToRemove }
+                saveAllInternal(context, localData)
+
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser != null) {
+                    val chunks = timestampsToRemove.chunked(10)
+                    for (chunk in chunks) {
+                        val task = firestore.collection("potholes").whereIn("timestamp", chunk).get()
+                        val result = com.google.android.gms.tasks.Tasks.await(task)
+                        for (doc in result.documents) {
+                            com.google.android.gms.tasks.Tasks.await(doc.reference.delete())
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    onComplete()
+                }
+            } catch (e: Exception) {
+                Log.e("RoadWise-Repo", "Failed to resolve hotspot records", e)
+                withContext(Dispatchers.Main) { onComplete() }
+            }
+        }
+    }
+
+    fun saveAllInternal(context: Context, potholes: List<PotholeData>) {
+        saveAll(context, potholes)
+        cached = potholes
+    }
+
+    private fun saveAll(context: Context, potholes: List<PotholeData>) {
+        val json = gson.toJson(potholes)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_POTHOLES, json)
+            .apply()
+    }
+
+    fun getAllPotholes(context: Context): List<PotholeData> {
+        cached?.let { return it }
+        return try {
+            val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_POTHOLES, null) ?: return emptyList<PotholeData>().also { cached = it }
+
+            val parser = JsonParser.parseString(json)
+            if (!parser.isJsonArray) return emptyList<PotholeData>().also { cached = it }
+
+            val array = parser.asJsonArray
+            val result = mutableListOf<PotholeData>()
+            for (element in array) {
+                try {
+                    val obj = element.asJsonObject
+                    val locObj = obj.get("location").asJsonObject
+                    val lat = if (locObj.has("lat")) locObj.get("lat").asDouble else 0.0
+                    val lon = if (locObj.has("lon")) locObj.get("lon").asDouble else 0.0
+                    val loc = GeoPoint(lat, lon)
+                    val type = RoadFeature.valueOf(obj.get("type").asString)
+                    val intensity = obj.get("intensity").asFloat
+                    val timestamp = if (obj.has("timestamp")) obj.get("timestamp").asLong else System.currentTimeMillis()
+                    val severity = if (obj.has("severity")) Severity.valueOf(obj.get("severity").asString) else Severity.LOW
+                    val paths = if (obj.has("imagePaths")) gson.fromJson<List<String>>(obj.get("imagePaths"), object : TypeToken<List<String>>() {}.type) else emptyList()
+                    val email = if (obj.has("createdByEmail")) obj.get("createdByEmail").asString else ""
+                    result.add(PotholeData(loc, type, intensity, severity, timestamp, paths, email))
+                } catch (e: Exception) { }
+            }
+            val sortedResult = result.sortedByDescending { it.timestamp }
+            cached = sortedResult
+            sortedResult
+        } catch (e: Exception) { emptyList() }
+    }
+
+    fun clearAll(context: Context) {
+        val allPotholes = getAllPotholes(context)
+        for (pothole in allPotholes) {
+            for (path in pothole.imagePaths) {
+                try { File(path).delete() } catch (_: Exception) { }
+            }
+        }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(KEY_POTHOLES).apply()
+        clearCache()
+    }
+
+    fun clearCache() {
+        cached = null
+    }
+
+    fun getStorageSizeBytes(context: Context): Long {
+        var totalSize = 0L
+        
+        context.getExternalFilesDir(null)?.let { dir ->
+            totalSize += dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }
+        
+        context.filesDir?.let { dir ->
+            totalSize += dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }
+
+        context.cacheDir?.let { dir ->
+            totalSize += dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        }
+
+        try {
+            val sharedPrefsDir = File(context.applicationInfo.dataDir, "shared_prefs")
+            if (sharedPrefsDir.exists() && sharedPrefsDir.isDirectory) {
+                totalSize += sharedPrefsDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            }
+        } catch (e: Exception) { }
+        
+        return totalSize
+    }
+}

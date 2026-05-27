@@ -1,0 +1,1049 @@
+
+
+TITLE OF THE PROJECT
+
+
+
+A MAJOR PROJECT REPORT SUBMITTED
+IN PARTIAL FULFILLMENT OF THE REQUIREMENTS
+FOR THE AWARD OF DEGREE OF
+
+BACHELOR OF TECHNOLOGY
+in
+Computer Science and Engineering
+
+
+
+
+SUBMITTED BY
+Name of the Candidate(s)
+Roll Number(s):
+
+UNDER THE SUPERVISION OF
+Supervisor Name
+Designation, Computer Science and Engineering
+
+SUBMITTED TO
+Department of Computer Science and Engineering
+Model Institute of Engineering and Technology (Autonomous)
+Kot Bhalwal, Jammu, India
+(NAAC "A" Grade Accredited)
+
+2026
+
+
+CANDIDATE'S DECLARATION
+
+
+I/We, [Name of the Candidate(s), Roll Number(s)], hereby declare that the work being presented in the major project entitled, "TITLE OF THE PROJECT" in partial fulfillment of the requirements for the award of the degree of B.Tech., submitted in the Department of Computer Science and Engineering, Model Institute of Engineering and Technology (Autonomous), Jammu, is an authentic record of my/our own work carried out under the supervision of [Supervisor Name] (Designation, Institute) and [Co-Supervisor Name, if any] (Designation, Department, Institute). The matter presented in this report has not been submitted in this or any other University/Institute for the award of the B.Tech. degree.
+
+Signature of the StudentDated: _______________
+
+Name(s): _______________________________
+Roll Number(s): _______________________________
+Department: Computer Science and Engineering
+Institute: Model Institute of Engineering and Technology (Autonomous), Jammu
+
+Ref. No.: ____________          Date: ____________
+
+
+
+
+
+
+
+CERTIFICATE
+
+
+Certified that this major project report entitled "TITLE OF THE PROJECT" is the bonafide work of "[Name of the Candidate(s), Roll No.(s)], of 7th/8th Semester, Computer Science and Engineering, Model Institute of Engineering and Technology (Autonomous), Jammu", who carried out the major project work under my/our supervision during February 2026 – May 2026.
+
+(Name of Supervisor)
+Supervisor
+Academic Designation
+CSE Department, MIET
+(Name of Co-Supervisor)
+Supervisor
+Academic Designation
+CSE Department, MIET
+
+This is to certify that the above statement is correct to the best of our knowledge.
+
+Prof. ABC
+HoD / Head PRC Committee
+CSE Department, MIET
+
+
+
+
+
+
+
+
+
+ABSTRACT
+
+
+The abstract is a precise summary of the complete work presented in the Major Project. It should be concise yet informative, providing an overview of the problem addressed, the methodology employed, the key results obtained, and the conclusions drawn. Written in 1.5 line spacing, paragraph format, not exceeding one page. Avoid citations, figures, and unexplained abbreviations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TABLE OF CONTENTS
+
+
+
+
+
+Section
+
+
+Page No.
+
+
+Candidate's Declaration
+
+
+i
+
+
+Certificate
+
+
+ii
+
+
+Abstract
+
+
+iii
+
+
+Table of Contents
+
+
+iv
+
+
+List of Tables
+
+
+v
+
+
+List of Figures
+
+
+vi
+
+
+Abbreviations Used (if applicable)
+
+
+vii
+
+
+Chapter 1 – Introduction
+
+
+1
+
+
+Chapter 2 – Literature Survey & Problem Formulation
+
+
+XX
+
+
+Chapter 3 – System Design / Methodology
+
+
+XX
+
+
+Chapter 4 – Implementation
+
+
+XX
+
+
+Chapter 5 – Results & Discussion
+
+
+XX
+
+
+Chapter 6 – Conclusion & Future Scope
+
+
+XX
+
+
+References
+
+
+XX
+
+
+Appendix A – [Title / Derivations]
+
+
+XX
+
+
+Appendix B – Source Code (if any)
+
+
+XX
+
+
+Appendix C – Data Sheets / Component List
+
+
+XX
+
+
+Appendix D – Publications (if any)
+
+
+XX
+
+Note: Front-matter pages use Roman numerals (i, ii …). Chapter pages use Arabic numerals (1, 2 …). The title page carries no number.
+
+
+
+
+
+LIST OF TABLES
+
+
+
+
+
+Table No.
+
+
+Caption
+
+
+Page No.
+
+
+1.1
+
+
+Caption of Table 1.1
+
+
+
+
+
+1.2
+
+
+Caption of Table 1.2
+
+
+
+
+
+2.1
+
+
+Caption of Table 2.1
+
+
+
+
+
+2.2
+
+
+Caption of Table 2.2
+
+
+
+
+
+3.1
+
+
+Caption of Table 3.1
+
+
+
+
+LIST OF FIGURES
+
+
+
+
+
+Figure No.
+
+
+Caption
+
+
+Page No.
+
+
+1.1
+
+
+Caption of Figure 1.1
+
+
+
+
+
+1.2
+
+
+Caption of Figure 1.2
+
+
+
+
+
+2.1
+
+
+Caption of Figure 2.1
+
+
+
+
+
+2.2
+
+
+Caption of Figure 2.2
+
+
+
+
+
+3.1
+
+
+Caption of Figure 3.1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CHAPTER STRUCTURE & FORMATTING GUIDE
+
+
+
+
+
+Chapter
+
+
+Title
+
+
+Key Content
+
+
+Chapter 1
+
+
+Introduction
+
+
+Background, motivation, objectives, scope, organization of report
+
+
+Chapter 2
+
+
+Literature Survey & Problem Formulation
+
+
+Review of existing work, research gaps, problem statement, objectives, methodology overview
+
+
+Chapter 3
+
+
+System Design / Methodology
+
+
+Architecture, design decisions, tools & technologies, flowcharts
+
+
+Chapter 4
+
+
+Implementation
+
+
+Development details, algorithms, code snippets, datasets, simulation
+
+
+Chapter 5
+
+
+Results & Discussion
+
+
+Experimental results, analysis, comparisons, graphs, tables
+
+
+Chapter 6
+
+
+Conclusion & Future Scope
+
+
+Summary, conclusions, limitations, future directions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Formatting Specifications
+
+
+
+Element
+
+
+Specification
+
+
+Paper Size
+
+
+A4 (210 × 297 mm), white bond, 70 g/m² or above
+
+
+Font
+
+
+Times New Roman throughout
+
+
+
+
+
+
+
+
+Body Text
+
+
+12 pt, 1.5 line spacing, first-line indent (one tab)
+
+
+Chapter Number
+
+
+16 pt, Bold, Sentence Case
+
+
+Chapter Title
+
+
+16 pt, Bold, ALL CAPS
+
+
+Section Heading (e.g. 1.1)
+
+
+12 pt, Bold
+
+
+Sub-section Heading (e.g. 1.1.1)
+
+
+12 pt, Bold
+
+
+Margins
+
+
+Top 1.0", Bottom 1.0", Left 1.5", Right 1.0"
+
+
+Table Caption
+
+
+10 pt, Bold label + plain title, placed ABOVE table
+
+
+Figure Caption
+
+
+10 pt, Bold label + plain title, placed BELOW figure
+
+
+Equations
+
+
+Centered; numbered flush right e.g. (1.1)
+
+
+Page Numbers – Front Matter
+
+
+Roman numerals (i, ii, iii…), bottom-left footer
+
+
+Page Numbers – Chapters
+
+
+Arabic numerals (1, 2, 3…), bottom-left footer
+
+
+Footer Text
+
+
+Project title in footer (all chapter pages)
+
+
+References Style
+
+
+Numbered [1], chronological, all details required
+
+
+Binding (Evaluation)
+
+
+Spiral bound or soft bound
+
+
+Binding (Final)
+
+
+Hard bound with gold-embossed lettering on black cover
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Binding 
+The evaluation copies of the project report may be spiral bound or soft bound. The final hard bound copies are to be submitted after the viva voce examination and approval by the PRC. 
+This is the final and delicate stage of the art of report writing and preparation. As simple as it looks, it can spoil all the efforts that have been put forth on the project report, if handled carelessly. The final hardbound project report should look professional and neat, since this is the first point of contact with the reader. An aesthetically pleasing cover page of a report can surely persuade the reader to go deeper into the contents of the report. This could only be achieved if the student hands the job to a competent printer. 
+
+Lettering 
+All lettering on Title cover (Black) shall be embossed in gold. 
+Bound back 
+The degree, the name of the candidate and the year of submission shall also be embossed on the bound (side) in gold. 
+Blank Sheets 
+In addition to the white sheets (binding requirement) two white sheets shall be put at the beginning and the end of the project report. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MODEL INSTITUTE OF ENGINEERING AND TECHNOLOGY (AUTONOMOUS)
+Kot Bhalwal, Jammu, India
+(NAAC "A" Grade Accredited)
+
+
+
+MAJOR PROJECT – FINAL EVALUATION SHEET
+
+
+
+
+
+Project Title
+
+
+
+
+
+Student Name(s)
+
+
+
+
+
+Roll Number(s)
+
+
+
+
+
+Branch / Semester
+
+
+CSE – 7th / 8th Semester
+
+
+Academic Year
+
+
+2025 – 2026
+
+
+Supervisor Name
+
+
+
+
+
+Co-Supervisor Name
+
+
+(if applicable)
+
+
+Evaluation Date
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Evaluation Criteria (FOR THE DEPARTMENT)
+
+
+
+S.No.
+
+
+Criteria
+
+
+Max Marks
+
+
+Marks Obtained
+
+
+1
+
+
+Project Report Quality (Structure, formatting, writing, completeness)
+
+
+
+
+
+
+
+
+2
+
+
+Technical Content (Depth of work, accuracy, use of concepts)
+
+
+
+
+
+
+
+
+3
+
+
+Implementation / Demonstration (Functionality, working prototype/output)
+
+
+
+
+
+
+
+
+4
+
+
+Presentation & Communication (Clarity, confidence, slide/demo delivery)
+
+
+
+
+
+
+
+
+5
+
+
+Viva Voce (Answers to questions, depth of understanding)
+
+
+
+
+
+
+
+
+6
+
+
+Innovation & Problem Solving (Novelty, practical impact, creativity)
+
+
+
+
+
+
+
+
+TOTAL
+
+
+
+
+
+
+
+Examiner's Remarks
+
+
+
+ 
+ 
+ 
+
+Internal Examiner
+
+Name & Designation
+Date: _______________
+External Examiner(if any)
+
+Name & Designation
+Date: _______________
+HoD / PRC Head
+
+Prof. ABC
+Date: _______________
+
+
+
+
+
+MAJOR PROJECT – SUBMISSION CHECKLIST
+
+
+Ensure all items are complete before final submission.
+
+
+
+
+S.No.
+
+
+Checklist Item
+
+
+Done (✓)
+
+
+Remarks
+
+
+1
+
+
+Title page formatted as per institute guidelines
+
+
+
+
+
+
+
+
+2
+
+
+Candidate's Declaration signed and dated
+
+
+
+
+
+
+
+
+3
+
+
+Certificate signed by Supervisor(s) and HoD
+
+
+
+
+
+
+
+
+4
+
+
+Abstract written (max 1 page)
+
+
+
+
+
+
+
+
+5
+
+
+Table of Contents with correct page numbers
+
+
+
+
+
+
+
+
+6
+
+
+List of Tables included (if tables used)
+
+
+
+
+
+
+
+
+7
+
+
+List of Figures included (if figures used)
+
+
+
+
+
+
+
+
+8
+
+
+Abbreviations list included (if applicable)
+
+
+
+
+
+
+
+
+9
+
+
+All chapters follow formatting specs (font, spacing, margins)
+
+
+
+
+
+
+
+
+10
+
+
+Figures/Tables cited in text with correct captions
+
+
+
+
+
+
+
+
+11
+
+
+Equations numbered and formatted using Equation Editor
+
+
+
+
+
+
+
+
+12
+
+
+References cited in text match reference list exactly
+
+
+
+
+
+
+
+
+13
+
+
+Reference list has all required details (journal, vol, pp, year)
+
+
+
+
+
+
+
+
+14
+
+
+Appendices attached (code, data sheets, publications, etc.)
+
+
+
+
+
+
+
+
+15
+
+
+Plagiarism check completed (attach report if required)
+
+
+
+
+
+
+
+
+16
+
+
+Spiral/soft bound copy submitted for evaluation
+
+
+
+
+
+
+
+
+17
+
+
+Hard-bound copy to be submitted post-viva voce approval
+
+
+
+
+
+
+
+
+18
+
+
+Digital PDF copy submitted on institute portal
+
+
+
+
+
+
+
+Student Signature: ____________________________    Date: _______________
+Supervisor Signature: _________________________    Date: _______________

@@ -1,0 +1,25 @@
+# RoadWise Git Ignore
+GEMINI.md
+
+# Gradle
+.gradle/
+build/
+
+# Android Studio
+.idea/
+*.iml
+local.properties
+.DS_Store
+captures/
+.externalNativeBuild
+.cxx
+google-services.json
+<<<<<<< HEAD
+=======
+app/google-services.json
+>>>>>>> contributor-fork/main
+DESIGN.md
+build_log.txt
+icon_preview.html
+RoadWise_Internals.docx
+roadwise_internals.md

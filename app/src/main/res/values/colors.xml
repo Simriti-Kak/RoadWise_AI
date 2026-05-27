@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cyber-Sleek Neon Palette -->
+    <color name="obsidian_background">#131313</color>
+    <color name="obsidian_lowest">#0E0E0E</color>
+    <color name="emerald_neon">#00FFC2</color>
+    <color name="emerald_glow">#6600FFC2</color> <!-- 40% glow -->
+    <color name="electric_gold">#FFD700</color>
+    <color name="cyber_blue">#00E0FF</color>
+    
+    <!-- Surface & Glassmorphism -->
+    <color name="glass_surface">#B3131313</color> <!-- 70% Obsidian -->
+    <color name="glass_surface_deep">#E6131313</color> <!-- 90% Obsidian -->
+    <color name="glass_border">#1AFFFFFF</color> <!-- 10% White -->
+    
+    <!-- Typography -->
+    <color name="text_high">#E2E2E2</color>
+    <color name="text_med">#B9CBC1</color>
+    <color name="text_low">#83958C</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
+</resources>
